@@ -1,0 +1,53 @@
+# LAMMPS input script
+
+# Initialization
+
+units real
+atom_style full
+boundary p p p
+bond_style harmonic 
+angle_style harmonic
+pair_style lj/cut/tip4p/long 1 2 1 1 0.1546 10.0 12.0
+kspace_style pppm/tip4p 1.0e-4
+neigh_modify every 1 delay 2 check yes
+
+# System definition
+
+region box block -40 40 -15 15 -15 15
+create_box 2 box &
+bond/types 1 &
+angle/types 1 &
+extra/bond/per/atom 2 &
+extra/angle/per/atom 1 &
+extra/special/per/atom 2
+
+# Simulation settings
+
+include Tip4p2005.lammps
+# There are potential function parameters for Tip4p/2005 model in Tip4p/2005.lammps 
+molecule h2omol H2OTip4p.txt 
+# There is topology information of water molecule in H2OTip4p.txt
+create_atoms 0 random 700 4564 NULL mol h2omol 454756
+group H2O type 1 2
+delete_atoms overlap 2 H2O H2O mol yes
+fix myshk H2O shake 1.0e-5 200 0 b 1 a 1 mol h2omol
+fix mynpt all npt temp 300 300 100 iso 1 1 1000
+dump mydmp all atom 1000 dump.xyz
+# output atom trajectory
+variable mytemp equal temp
+variable myvol equal vol
+fix myat1 all ave/time 10 10 100 v_mytemp file temperature.dat
+# Output temperature 
+fix myat2 all ave/time 10 10 100 v_myvol file volume.dat
+# Output volume
+variable myoxy equal count(H2O)/3 
+variable mydensity equal ${myoxy}/v_myvol
+fix myat3 all ave/time 10 10 100 v_mydensity file density.dat
+# Output density
+thermo 1000
+timestep 2.0
+run 25000
+write_data H2O.data
+# Finally topology information of water molecule is saved in H2O.data 
+
+
